@@ -37,9 +37,13 @@ def read_data(file_paths):
                 # print(flags)
                 win = flags['Win']
                 end_len = flags['Len']
-                seq = flags['Seq']
+#                 seq = flags['Seq']
+                if 'Seq' in flags:
+                    seq = 1
+                else:
+                    seq = 0
                 if 'Ack' in flags:
-                    ack = flags['Ack']
+                    ack = 1
                 else:
                     ack = 0
 
@@ -92,31 +96,31 @@ import pandas as pd
 def calculate_attack_features(dataframe, window_size=10):
 #     dataframe = dataframe.sort_values(by='timestamp')
 
-    timestamps = []
-    seq_ack_ratio = []
-    window_size_ack_ratio = []
+    ack_ratio = []
+    ack_seq_ratio = []
     end_length_avg = []
     packet_rate = []
 
     for i in range(len(dataframe) - window_size + 1):
         window = dataframe.iloc[i:i + window_size]
-        timestamps.append(window['timestamp'].max())
 
-        # Feature 1: Sequence to ACK ratio
-        seq_ack_ratio.append(window['seq'].sum() / window['ack'].sum() if window['ack'].sum() != 0 else 0)
 
-        # Feature 2: ACK ratio within the window
-        window_size_ack_ratio.append(window['ack'].sum() / window_size)
+        # Feature 1: ACK ratio within the window
+        ack_ratio.append(window['ack'].sum() / window_size)
+        
+        # Feature 2: Seq ratio
+        ack_seq_ratio.append(window['ack'].sum() / window['seq'].sum())
 
-        # Feature 3: Average end_length
+        # Feature 4: Average end_length
         end_length_avg.append(window['end_length'].mean())
 
-        # Feature 4: Packet rate
+        # Feature 5: Packet rate
         packet_rate.append(len(window) / (window['timestamp'].max() - window['timestamp'].min()))
 
+    # Create a new dataframe with features
     features = pd.DataFrame({
-        'seq_ack_ratio': seq_ack_ratio,
-        'window_size_ack_ratio': window_size_ack_ratio,
+        'ack_ratio': ack_ratio,
+        'ack_seq_ratio': ack_seq_ratio,
         'end_length_avg': end_length_avg,
         'packet_rate': packet_rate
     })
@@ -128,7 +132,7 @@ print(X_features.head())
 
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 import matplotlib.pyplot as plt
-y = y[0:len(X_features)] # NECESSARY BECAUSE OF WINDOW
+y = y[0:len(X_features)]
 X_train, X_test, y_train, y_test = train_test_split(X_features, y, test_size=0.3, random_state=42)
 X.head()
 # Initialize and train the model
