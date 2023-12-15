@@ -53,9 +53,14 @@ def read_data(file_paths):
     return pd.DataFrame(all_data, columns=['timestamp', 'source_ip', 'length', 'seq', 'ack', 'window', 'end_length'])
 
 # Read the data
-normal_traffic = read_data(['basic_output.txt', 'largePacket_output.txt', 'fast_output.txt'])
+n1 = '/Users/akhilpaulraj/Downloads/basic_output.txt'
+n2 = '/Users/akhilpaulraj/Downloads/largePacket_output.txt'
+n3 = '/Users/akhilpaulraj/Downloads/fast_output.txt'
+a1 = '/Users/akhilpaulraj/Downloads/random_output.txt'
+a2 = '/Users/akhilpaulraj/Downloads/fixed_output.txt'
+normal_traffic = read_data([n1, n2, n3])
 # print(normal_traffic.head())
-attack_traffic = read_data(['random_output.txt', 'fixed_output.txt'])
+attack_traffic = read_data([a1, a2])
 # print(attack_traffic.head())
 
 # print(normal_traffic)
@@ -69,20 +74,73 @@ normal_traffic['isattack'] = 0
 attack_traffic['isattack'] = 1
 combined_data = pd.concat([normal_traffic, attack_traffic])
 
-# Split the data into features and labels
+normsorted = normal_traffic.sort_values(by='timestamp')
+attacksorted = attack_traffic.sort_values(by='timestamp')
+truncatedattack = attacksorted.loc[2000000:2500000]
+combined_data = pd.concat([normal_traffic, truncatedattack])
+
+# feature selection
+combined_data = combined_data.sort_values(by='timestamp')
 X = combined_data.drop('isattack', axis=1)
 y = combined_data['isattack']
-X = combined_data.drop('source_ip', axis=1)
+X = X.drop('source_ip', axis=1)
+print(X.head())
+print(y.head())
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+import pandas as pd
+
+def calculate_attack_features(dataframe, window_size=10):
+#     dataframe = dataframe.sort_values(by='timestamp')
+
+    timestamps = []
+    seq_ack_ratio = []
+    window_size_ack_ratio = []
+    end_length_avg = []
+    packet_rate = []
+
+    for i in range(len(dataframe) - window_size + 1):
+        window = dataframe.iloc[i:i + window_size]
+        timestamps.append(window['timestamp'].max())
+
+        # Feature 1: Sequence to ACK ratio
+        seq_ack_ratio.append(window['seq'].sum() / window['ack'].sum() if window['ack'].sum() != 0 else 0)
+
+        # Feature 2: ACK ratio within the window
+        window_size_ack_ratio.append(window['ack'].sum() / window_size)
+
+        # Feature 3: Average end_length
+        end_length_avg.append(window['end_length'].mean())
+
+        # Feature 4: Packet rate
+        packet_rate.append(len(window) / (window['timestamp'].max() - window['timestamp'].min()))
+
+    features = pd.DataFrame({
+        'seq_ack_ratio': seq_ack_ratio,
+        'window_size_ack_ratio': window_size_ack_ratio,
+        'end_length_avg': end_length_avg,
+        'packet_rate': packet_rate
+    })
+
+    return features
+
+X_features = calculate_attack_features(X)
+print(X_features.head())
+
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+import matplotlib.pyplot as plt
+y = y[0:len(X_features)] # NECESSARY BECAUSE OF WINDOW
+X_train, X_test, y_train, y_test = train_test_split(X_features, y, test_size=0.3, random_state=42)
 X.head()
 # Initialize and train the model
-model = RandomForestClassifier()
+model = DecisionTreeClassifier(max_depth = 2)
 model.fit(X_train, y_train)
 
 print('Training Accuracy', accuracy_score(y_train, model.predict(X_train)))
 print('Test Accuracy', accuracy_score(y_test, model.predict(X_test)))
-with open('RF.pkl', 'wb') as file:
+with open('DTC.pkl', 'wb') as file:
     pickle.dump(model, file)
-
-print("Model trained and saved as RF.pkl")
+print(X_features.columns.to_list())
+plt.figure(figsize=(12, 8))
+plot_tree(model, feature_names=X_features.columns.to_list())
+plt.savefig('DT.jpg', format='jpg')
+plt.show()
