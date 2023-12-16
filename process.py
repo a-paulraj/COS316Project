@@ -1,6 +1,6 @@
 import subprocess
 
-# Shared dictionary to store IP addresses and their request counts
+# shared dictionary to store IP addresses and their request counts
 ip_requests = {}
 
 def monitor_ips():

@@ -56,7 +56,7 @@ def read_data(file_paths):
     # print(d.shape)
     return pd.DataFrame(all_data, columns=['timestamp', 'source_ip', 'length', 'seq', 'ack', 'window', 'end_length'])
 
-# Read the data
+# reads data
 n1 = '/Users/akhilpaulraj/Downloads/basic_output.txt'
 n2 = '/Users/akhilpaulraj/Downloads/largePacket_output.txt'
 n3 = '/Users/akhilpaulraj/Downloads/fast_output.txt'
@@ -69,7 +69,7 @@ attack_traffic = read_data([a1, a2])
 
 # print(normal_traffic)
 
-# # Extract features
+# Extract features
 # features_normal = extract_features(normal_traffic)
 # features_attack = extract_features(attack_traffic)
 
@@ -132,10 +132,10 @@ print(X_features.head())
 
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 import matplotlib.pyplot as plt
-y = y[0:len(X_features)]
+y = y[:len(X_features)]
 X_train, X_test, y_train, y_test = train_test_split(X_features, y, test_size=0.3, random_state=42)
 X.head()
-# Initialize and train the model
+# initializes and train the model
 model = DecisionTreeClassifier(max_depth = 2)
 model.fit(X_train, y_train)
 

@@ -8,27 +8,29 @@ from training import calculate_attack_features
 
 app = Flask(__name__)
 
-# Function to load the trained model
+# loads the trained model
 def load_model(filename):
     with open(filename, 'rb') as file:
         return pickle.load(file)
 
-# Load the trained model
 model = load_model('DTC.pkl')
 
 def block_ip_address(ip_address):
     pass
 
-# Shared dictionary to store data for each IP address
+def cont_cred(unnec):
+    pass
+
+# stores data for each IP address
 ip_data = defaultdict(list)
 
-# Function to preprocess and predict traffic data
+# preprocesses and predicts traffic data
 def preprocess_and_predict(data):
-    # Preprocess the data
+    # preprocess
     data_df = pd.DataFrame(data)
     processed_data = calculate_attack_features(data_df)
 
-    # Predict using the model
+    # predict
     prediction = model.predict(processed_data)
     return prediction
 
@@ -64,35 +66,35 @@ def extract_data_from_line(line):
 
     return data
 
-# Function to monitor and process network traffic
+# monitors and processes network traffic
 def monitor_network_traffic():
     process = subprocess.Popen(['tshark', '-i', 'lo'],
                                stdout=subprocess.PIPE, 
                                stderr=subprocess.DEVNULL)
     
-    all_requests = []  # List to store all incoming requests
+    all_requests = []  # stores incoming requests
 
     while True:
         line = process.stdout.readline()
         if line:
             data = extract_data_from_line(line.decode().strip())
             
-            # Check if the necessary data is present
+            # checks that necessary data is present
             if 'source_ip' in data:
                 all_requests.append(data)
-                # Check if we have collected 10 requests
+                # checks we have collected 10 requests
                 if len(all_requests) == 10:
-                    # Convert the collected data to a DataFrame
+                    # converts collected data to a dataframe object
                     data_df = pd.DataFrame(all_requests)
                     prediction = preprocess_and_predict(data_df)
 
-                    # Check for an attack and print all involved IPs
-                    if any(prediction == 1):  # If any request in the batch is an attack
+                    # checks for an attack and print all involved IPs
+                    if any(prediction == 1):  # if any request in batch is attack
                         print("Potential Attack detected in the following IPs:")
                         for request in all_requests:
                             print(request['source_ip'])
                     
-                    # Clear the list for the next set of requests
+                    # clears list for next set of requests
                     all_requests.clear()
 
 def retrieve_status_information():
@@ -105,14 +107,14 @@ def retrieve_status_information():
     }
     return status
     
-# HTTP endpoint to get the status or list of blocked IPs
+# HTTP endpoint to get status or list of blocked IPs
 @app.route('/status', methods=['GET'])
 def get_status():
-    # Retrieve and return status information
+    # retrieve and return status information
     status = retrieve_status_information()
     return jsonify(status)
 
-# Start network monitoring in a separate thread
+# start network monitoring in a separate thread
 threading.Thread(target=monitor_network_traffic, daemon=True).start()
 
 if __name__ == '__main__':
